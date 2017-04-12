@@ -1,5 +1,8 @@
+import { count } from 'rxjs/operator/count';
+import * as net from 'net';
+import { isDiffResult, isUnchanged, Substitution, Unchanged } from './common';
 import { IDiffResult } from "diff";
-import * as _ from "lodash";
+import * as _ from 'lodash';
 
 export function undo(substitution: Substitution): Unchanged {
     const removal = substitution.removal;
@@ -11,10 +14,9 @@ export function undo(substitution: Substitution): Unchanged {
     };
 }
 
-export type Substitution = { insertion?: IDiffResult, removal?: IDiffResult };
-export type Unchanged = IDiffResult & { added: false, removed: false };
+
 export type SubstitutionPredicate = (substitution: Substitution) => boolean;
-export function filter(predicate: SubstitutionPredicate, parts: IDiffResult[]) {
+export function filterDiffResults(predicate: SubstitutionPredicate, parts: IDiffResult[]) {
 
     let state: Substitution | undefined;
     const filtered = parts
@@ -53,12 +55,4 @@ export function filter(predicate: SubstitutionPredicate, parts: IDiffResult[]) {
         }
         return result;
     })
-}
-
-function isDiffResult(item: IDiffResult | Substitution): item is IDiffResult {
-    return (<IDiffResult>item).value !== undefined;
-}
-
-function isUnchanged(diff: IDiffResult): diff is Unchanged {
-    return !diff.added && !diff.removed;
 }
