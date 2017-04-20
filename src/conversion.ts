@@ -3,14 +3,48 @@ import { isUnchanged } from './common';
 import { IDiffResult, IHunk, IUniDiff } from "diff";
 import * as _ from "lodash";
 
-export type CoalescedDiff = { before: string, after: string };
+export type Comparison = { before: string, after: string };
 
-export function coalesceHunk(hunk: IHunk): CoalescedDiff {
+export function compareHunk(hunk: IHunk): Comparison {
     // Splice newline information with the line content and parse into diff results
     const parts = _.zip(hunk.lines, <string[]>hunk["linedelimiters"])
         .map(([line, delimiter]) => line.concat(delimiter))
         .map(parseLine);
-    return coalesceDiffResultSequence(parts);
+    return compareDiffResultSequence(parts);
+}
+
+export function compareDiffResultSequence(parts: IDiffResult[]): Comparison {
+    return parts
+        .reduce<Comparison>((net, curr) => {
+            // Unchanged items should be appended to both coalesced values
+            if (isUnchanged(curr)) {
+                return { before: net.before + curr.value, after: net.after + curr.value };
+            }
+            if (curr.removed) {
+                return { after: net.after, before: net.before + curr.value };
+            }
+            if (curr.added) {
+                return { before: net.before, after: net.after + curr.value };
+            }
+
+            throw new Error("Invalid diff item provided. At least one of added or removed must be false.");
+        }, { before: '', after: '' });
+}
+
+function serializeDiff(diff: IUniDiff) {
+    return [
+        diff.oldHeader,
+        diff.newHeader,
+        `--- ${diff.oldFileName}`,
+        `+++ ${diff.newFileName}`,
+        ...diff.hunks.map(serializeHunk)
+    ].join();
+}
+function serializeHunk(hunk: IHunk) {
+    return [
+        `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`,
+        ...hunk.lines
+    ].join();
 }
 
 type LinePrefix = '+' | '-' | undefined;
@@ -29,22 +63,4 @@ function parseLine(line: string): IDiffResult {
         count: value.length,
         value: value
     }
-}
-
-export function coalesceDiffResultSequence(parts: IDiffResult[]): CoalescedDiff {
-    return parts
-        .reduce<CoalescedDiff>((net, curr) => {
-            // Unchanged items should be appended to both coalesced values
-            if (isUnchanged(curr)) {
-                return { before: net.before + curr.value, after: net.after + curr.value };
-            }
-            if (curr.removed) {
-                return { after: net.after, before: net.before + curr.value };
-            }
-            if (curr.added) {
-                return { before: net.before, after: net.after + curr.value };
-            }
-
-            throw new Error("Invalid diff item provided. At least one of added or removed must be false.");
-        }, { before: '', after: '' });
 }

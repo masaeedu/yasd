@@ -1,7 +1,7 @@
 import { count } from 'rxjs/operator/count';
 import * as net from 'net';
 import { isDiffResult, isUnchanged, Substitution, Unchanged } from './common';
-import { IDiffResult } from "diff";
+import { IDiffResult, IHunk } from "diff";
 import * as _ from 'lodash';
 
 export function undo(substitution: Substitution): Unchanged {
@@ -56,3 +56,8 @@ export function filterDiffResults(predicate: SubstitutionPredicate, parts: IDiff
         return result;
     })
 }
+
+// function reviseHunk(hunk: IHunk, predicate: SubstitutionPredicate): IHunk {
+//     const revised = hunk;
+//     const lines = hunk.lines.map();
+// }
