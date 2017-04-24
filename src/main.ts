@@ -24,7 +24,7 @@ const predicates: { [idx: string]: SubstitutionPredicate } = {
 
     xmlnswrap: ({ insertion, removal }) => !!(insertion && removal && diffChars(insertion.value, removal.value).every(diff => isUnchanged(diff) || !/\S/.test(diff.value))),
 
-    quoteInstallPath: ({ insertion, removal }) => !!(insertion && removal && insertion.value.replace('&quot;', '') === removal.value)
+    quoteInstallPath: ({ insertion, removal }) => !!(insertion && removal && diffChars(insertion.value, removal.value).every(diff => isUnchanged(diff) || /^[&quot;\/\\]+$/.test(diff.value)))
     // sshToWindowsPredicate: (removed, added) => removed && added && /^SSHRemoteSystemCommand$/.test(removed.value) && /^RemoteSystemCommand$/.test(added.value)
 }
 
@@ -43,16 +43,16 @@ for (let diff of diffs) {
         // to be accumulated back into revised hunks, with appropriately adjusted line-number headers, after which the hunk 
         // sequence can be serialized into a revised patch
         const parts = diffWordsWithSpace(originalChange.before, originalChange.after);
-        const filteredDiffResults = filterDiffResults(predicate, parts);
-        const filteredChange = compareDiffResultSequence(filteredDiffResults);
+        const filteredParts = filterDiffResults(predicate, parts);
+        const filteredChange = compareDiffResultSequence(filteredParts);
 
-        if (filteredDiffResults.some(part => !isUnchanged(part))) {
-            // const rendered = {
-            //     "original": renderDiffResults(diffResults),
-            //     "filtered": renderDiffResults(filteredDiffResults),
-            //     "roundtrip": renderDiffResults(diffWordsWithSpace(filteredAggregate.before, filteredAggregate.after))
-            // }
-            // _.each(rendered, (v, k) => story.info(k, v));
+        if (filteredParts.some(part => !isUnchanged(part))) {
+            const rendered = {
+                "original": renderDiffResults(parts),
+                "filtered": renderDiffResults(filteredParts),
+                "roundtrip": renderDiffResults(diffWordsWithSpace(filteredChange.before, filteredChange.after))
+            }
+            _.each(rendered, (v, k) => story.info(k, v));
 
             // if (rendered["filtered"] !== rendered["roundtrip"]) {
             //     throw new Error("Round tripped diff -> coalesce -> diff should produce same result as first diff");
